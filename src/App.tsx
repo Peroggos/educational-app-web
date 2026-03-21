@@ -13,9 +13,25 @@ import { TestApiPage } from './pages/TestApiPage';
 import { ClearStoragePage } from './pages/ClearStoragePage';
 import { DebugPage } from './pages/DebugPage';
 import { DebugAuthPage } from './pages/DebugAuthPage';
-import { LessonPage } from './pages/LessonPage';
+import { LessonPage } from './pages/lessons/LessonPage';
 import { CreateLessonPage } from './pages/teacher/CreateLessonPage';
 import { CreateTestPage } from './pages/teacher/CreateTestPage';
+import { TestHistoryPage } from './pages/student/TestHistoryPage';
+import { DebugTestsPage } from './pages/DebugTestsPage';
+import { DebugLessonApiPage } from './pages/teacher/DebugLessonApiPage';
+import { DebugStartTestPage } from './pages/DebugStartTestPage';
+import { DebugSubmitFormatPage } from './pages/DebugSubmitFormatPage';
+import { CreateTestWithQuestionsPage } from './pages/CreateTestWithQuestionsPage';
+
+// Student pages
+import { StudentLayout } from './components/StudentLayout';
+import { StudentDashboardPage } from './pages/student/StudentDashboardPage';
+import { StudentSubjectsPage } from './pages/student/StudentSubjectsPage';
+import { StudentSubjectDetailPage } from './pages/student/StudentSubjectDetailPage';
+import { StudentTestsPage } from './pages/student/StudentTestsPage';
+import { StudentProgressPage } from './pages/student/StudentProgressPage';
+import { StudentAchievementsPage } from './pages/student/StudentAchievementsPage';
+
 // Teacher pages
 import { TeacherDashboardPage } from './pages/teacher/TeacherDashboardPage';
 
@@ -42,7 +58,12 @@ function App() {
           <Route path="/clear" element={<ClearStoragePage />} />
           <Route path="/debug" element={<DebugPage />} />
           <Route path="/debug-auth" element={<DebugAuthPage />} />
-          
+          <Route path="/debug-tests" element={<DebugTestsPage />} />
+          <Route path="/debug-lesson-api" element={<DebugLessonApiPage />} />
+          <Route path="/debug-start-test" element={<DebugStartTestPage />} />
+          <Route path="/debug-submit-format" element={<DebugSubmitFormatPage />} />
+          <Route path="/create-test-with-questions" element={<CreateTestWithQuestionsPage />} />
+
           {/* Защищенные маршруты (для всех авторизованных) */}
           <Route element={<ProtectedRoute />}>
             <Route element={<Layout />}>
@@ -58,17 +79,33 @@ function App() {
             </Route>
           </Route>
 
+          {/* Маршруты для учеников */}
+          <Route element={<ProtectedRoute />}>
+            <Route element={<StudentLayout />}>
+              <Route path="/student" element={<StudentDashboardPage />} />
+              <Route path="/student/subjects" element={<StudentSubjectsPage />} />
+              <Route path="/student/subject/:id" element={<StudentSubjectDetailPage />} />
+              <Route path="/student/tests" element={<StudentTestsPage />} />
+              <Route path="/student/test/:id" element={<TestPage />} />
+              <Route path="/student/lesson/:id" element={<LessonPage />} />
+              <Route path="/student/history" element={<TestHistoryPage />} />
+              <Route path="/student/progress" element={<StudentProgressPage />} />
+              <Route path="/student/achievements" element={<StudentAchievementsPage />} />
+              <Route path="/student/profile" element={<ProfilePage />} />
+            </Route>
+          </Route>
+
           {/* Маршруты для учителей */}
           <Route element={<ProtectedRoute />}>
             <Route element={<RoleBasedRoute allowedRoles={['TEACHER', 'ADMIN']} />}>
               <Route element={<Layout />}>
-                <Route path="/teacher/create-lesson/:topicId?" element={<CreateLessonPage />} />
-                <Route path="/teacher/create-test" element={<CreateTestPage />} />
-                <Route path="/teacher/lessons/:id" element={<LessonPage />} />
                 <Route path="/teacher/dashboard" element={<TeacherDashboardPage />} />
                 <Route path="/teacher/subjects" element={<SubjectsPage />} />
-                <Route path="/teacher/create-test" element={<div>Создание теста</div>} />
-                <Route path="/teacher/edit-test/:id" element={<div>Редактирование теста</div>} />
+                <Route path="/teacher/create-lesson" element={<CreateLessonPage />} />
+                <Route path="/teacher/create-lesson/:topicId" element={<CreateLessonPage />} />
+                <Route path="/teacher/create-test" element={<CreateTestPage />} />
+                <Route path="/teacher/edit-test/:id" element={<CreateTestPage />} />
+                <Route path="/teacher/lessons/:id" element={<LessonPage />} />
                 <Route path="/teacher/students" element={<div>Управление учениками</div>} />
               </Route>
             </Route>

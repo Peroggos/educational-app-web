@@ -3,13 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { CheckCircle, XCircle, Clock, Award } from 'lucide-react';
-
-interface TestResult {
-  score: number;
-  totalQuestions: number;
-  timeSpent: number;
-  completedAt: string;
-}
+import type { TestResult } from '../api/tests.api';
 
 export const TestResultPage: React.FC = () => {
   const location = useLocation();
@@ -28,13 +22,13 @@ export const TestResultPage: React.FC = () => {
   }
 
   const percentage = (result.score / result.totalQuestions) * 100;
-  const minutes = Math.floor(result.timeSpent / 60);
-  const seconds = result.timeSpent % 60;
+  const minutes = result.timeSpent ? Math.floor(result.timeSpent / 60) : 0;
+  const seconds = result.timeSpent ? result.timeSpent % 60 : 0;
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <h1 className="text-3xl font-bold text-center text-gray-900">
-        Результаты теста
+        Результаты теста: {result.testName}
       </h1>
 
       <Card className="text-center">
@@ -47,7 +41,7 @@ export const TestResultPage: React.FC = () => {
         </div>
 
         <div className="text-5xl font-bold mb-2">
-          {result.score} / {result.totalQuestions}
+          {result.correctAnswers} / {result.totalQuestions}
         </div>
         <p className="text-xl text-gray-600 mb-6">
           {percentage.toFixed(1)}% правильных ответов

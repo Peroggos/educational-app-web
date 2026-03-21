@@ -86,68 +86,64 @@ export const CreateLessonPage: React.FC = () => {
     fetchTopics();
   }, [selectedSubject]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setLoading(true);
 
-    try {
-      // Проверяем обязательные поля
-      if (!formData.title.trim()) {
-        toast.error('Введите название урока');
-        setLoading(false);
-        return;
-      }
-      if (!formData.content.trim()) {
-        toast.error('Введите содержание урока');
-        setLoading(false);
-        return;
-      }
-      if (!formData.topicId) {
-        toast.error('Выберите тему');
-        setLoading(false);
-        return;
-      }
-      if (!formData.order || formData.order < 1) {
-        toast.error('Введите корректный порядок урока');
-        setLoading(false);
-        return;
-      }
+  try {
+    // Проверяем обязательные поля
+    const errors: string[] = [];
+    
+    if (!formData.title.trim()) errors.push('Название урока');
+    if (!formData.content.trim()) errors.push('Содержание урока');
+    if (!formData.topicId) errors.push('Тема');
+    if (!formData.order || formData.order < 1) errors.push('Порядок урока');
 
-      const lessonData: CreateLessonData = {
-        title: formData.title.trim(),
-        description: formData.description.trim() || undefined,
-        content: formData.content,
-        order: formData.order,
-        topicId: formData.topicId,
-        videoUrl: formData.videoUrl.trim() || undefined,
-        duration: formData.duration,
-      };
-
-      console.log('Sending lesson data:', lessonData);
-      
-      const result = await lessonsApi.create(lessonData);
-      console.log('Lesson created:', result);
-      
-      toast.success('Урок успешно создан!');
-      navigate('/teacher/dashboard');
-    } catch (error: any) {
-      console.error('Error creating lesson:', error);
-      
-      if (error.response?.status === 400) {
-        toast.error('Проверьте правильность заполнения полей');
-      } else if (error.response?.status === 401) {
-        toast.error('Необходима авторизация');
-      } else if (error.response?.status === 403) {
-        toast.error('У вас нет прав для создания урока');
-      } else if (error.response?.status === 404) {
-        toast.error('Указанная тема не найдена');
-      } else {
-        toast.error(error.response?.data?.message || 'Ошибка при создании урока');
-      }
-    } finally {
+    if (errors.length > 0) {
+      toast.error(`Заполните обязательные поля: ${errors.join(', ')}`);
       setLoading(false);
+      return;
     }
-  };
+
+    // Формируем данные в том формате, который ожидает бэкенд
+    const lessonData = {
+      title: formData.title.trim(),
+      description: formData.description.trim() || undefined,
+      content: formData.content,
+      order: formData.order,
+      topicId: formData.topicId,
+      videoUrl: formData.videoUrl.trim() || undefined,
+      duration: formData.duration,
+    };
+
+    console.log('📤 Sending lesson data to server:', JSON.stringify(lessonData, null, 2));
+    
+    // Пробуем отправить
+    const result = await lessonsApi.create(lessonData);
+    console.log('✅ Lesson created:', result);
+    
+    toast.success('Урок успешно создан!');
+    navigate('/teacher/dashboard');
+  } catch (error: any) {
+    console.error('❌ Error creating lesson:', error);
+    console.error('❌ Response data:', error.response?.data);
+    console.error('❌ Response status:', error.response?.status);
+    
+    // Показываем сообщение от сервера
+    if (error.response?.data?.message) {
+      const serverMessage = error.response.data.message;
+      if (Array.isArray(serverMessage)) {
+        toast.error(serverMessage.join(', '));
+      } else {
+        toast.error(serverMessage);
+      }
+    } else {
+      toast.error('Ошибка при создании урока');
+    }
+  } finally {
+    setLoading(false);
+  }
+};
 
   if (loadingSubjects) {
     return (
