@@ -44,10 +44,16 @@ export const subjectsApi = {
   },
 
   // POST /api/topics - создать тему (ADMIN/TEACHER)
-  createTopic: async (data: { name: string; description?: string; subjectId: string }): Promise<Topic> => {
-    const response = await apiClient.post<ServerResponse<Topic>>('/topics', data);
-    return response.data.data;
-  },
+createTopic: async (data: { name: string; description?: string; subjectId: string }): Promise<Topic> => {
+  console.log('Creating topic with data:', data);
+  
+  if (!data.name || !data.subjectId) {
+    throw new Error('Missing required fields: name and subjectId');
+  }
+  
+  const response = await apiClient.post<ServerResponse<Topic>>('/topics', data);
+  return response.data.data;
+},
 
   // PATCH /api/topics/:id - обновить тему (ADMIN/TEACHER)
   updateTopic: async (id: string, data: { name?: string; description?: string }): Promise<Topic> => {

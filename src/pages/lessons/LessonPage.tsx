@@ -4,73 +4,60 @@ import { lessonsApi } from '../../api/lessons.api';
 import { testsApi } from '../../api/tests.api';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
-import { Clock, ArrowLeft, Video, FileText, Link as LinkIcon, Image } from 'lucide-react';
+import { Clock, ArrowLeft, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
-
-interface Lesson {
-  id: string;
-  title: string;
-  description?: string;
-  content: string;
-  order: number;
-  topicId: string;
-  videoUrl?: string;
-  duration?: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface Test {
-  id: string;
-  name: string;
-  description?: string;
-  timeLimit?: number;
-  questions?: any[];
-}
 
 export const LessonPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [lesson, setLesson] = useState<Lesson | null>(null);
-  const [topicTests, setTopicTests] = useState<Test[]>([]);
+  const [lesson, setLesson] = useState<any>(null);
+  const [topicTests, setTopicTests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const lessonData = await lessonsApi.getById(id!);
-        setLesson(lessonData);
-
-        // Загружаем тесты по теме урока
-        if (lessonData.topicId) {
-          const tests = await testsApi.getByTopic(lessonData.topicId);
-          setTopicTests(tests);
-        }
-      } catch (error: any) {
-        console.error('Error fetching lesson:', error);
-        setError(error.response?.data?.message || 'Не удалось загрузить урок');
-        toast.error('Ошибка загрузки урока');
-      } finally {
-        setLoading(false);
+useEffect(() => {
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      console.log('Fetching lesson with ID:', id);
+      
+      // Проверка на валидный ID (должен быть в формате cuid - 25 символов)
+      const isValidId = id && /^[a-z0-9]{25}$/.test(id);
+      
+      if (!isValidId) {
+        console.error('Invalid lesson ID format:', id);
+        toast.error('Неверный ID урока');
+        navigate('/subjects', { replace: true });
+        return;
       }
-    };
+      
+      const lessonData = await lessonsApi.getById(id);
+      console.log('Lesson data:', lessonData);
+      setLesson(lessonData);
 
-    if (id) {
-      fetchData();
-    }
-  }, [id]);
-
-  const getResourceIcon = (type: string) => {
-    switch(type) {
-      case 'VIDEO': return <Video className="text-blue-500" size={20} />;
-      case 'PDF': return <FileText className="text-red-500" size={20} />;
-      case 'LINK': return <LinkIcon className="text-green-500" size={20} />;
-      case 'IMAGE': return <Image className="text-purple-500" size={20} />;
-      default: return <FileText className="text-gray-500" size={20} />;
+      if (lessonData.topicId) {
+        const tests = await testsApi.getByTopic(lessonData.topicId);
+        setTopicTests(tests);
+      }
+    } catch (error: any) {
+      console.error('Error fetching lesson:', error);
+      if (error.response?.status === 404) {
+        toast.error('Урок не найден');
+        navigate('/subjects', { replace: true });
+      } else {
+        setError(error.response?.data?.message || 'Не удалось загрузить урок');
+      }
+    } finally {
+      setLoading(false);
     }
   };
+
+  if (id) {
+    fetchData();
+  }
+}, [id, navigate]);
 
   if (loading) {
     return (
@@ -83,8 +70,9 @@ export const LessonPage: React.FC = () => {
   if (error || !lesson) {
     return (
       <div className="text-center py-12">
+        <AlertCircle className="mx-auto h-12 w-12 text-red-500 mb-4" />
         <p className="text-red-600 mb-4">{error || 'Урок не найден'}</p>
-        <Button onClick={() => navigate(-1)}>Вернуться назад</Button>
+        <Button onClick={() => navigate('/subjects')}>Вернуться к предметам</Button>
       </div>
     );
   }
@@ -99,7 +87,6 @@ export const LessonPage: React.FC = () => {
         Назад
       </button>
 
-      {/* Заголовок урока */}
       <div>
         <h1 className="text-3xl font-bold text-gray-900">{lesson.title}</h1>
         {lesson.description && (
@@ -113,7 +100,6 @@ export const LessonPage: React.FC = () => {
         )}
       </div>
 
-      {/* Контент урока */}
       <Card>
         <div 
           className="prose max-w-none"
@@ -121,7 +107,6 @@ export const LessonPage: React.FC = () => {
         />
       </Card>
 
-      {/* Видео, если есть */}
       {lesson.videoUrl && (
         <Card>
           <h2 className="text-xl font-semibold mb-4">Видеоурок</h2>
@@ -135,7 +120,6 @@ export const LessonPage: React.FC = () => {
         </Card>
       )}
 
-      {/* Тесты по теме */}
       {topicTests.length > 0 && (
         <Card>
           <h2 className="text-xl font-semibold mb-4">Тесты по теме</h2>
@@ -163,7 +147,6 @@ export const LessonPage: React.FC = () => {
         </Card>
       )}
 
-      {/* Навигация */}
       <div className="flex justify-between">
         <Button variant="outline" onClick={() => navigate(-1)}>
           Предыдущий урок

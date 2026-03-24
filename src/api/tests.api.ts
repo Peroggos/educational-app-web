@@ -9,7 +9,6 @@ export interface Test {
   createdAt: string;
   updatedAt: string;
   questions?: Question[];
-  results?: TestResult[];
 }
 
 export interface Question {
@@ -24,13 +23,14 @@ export interface Question {
 
 export interface TestResult {
   id: string;
+  userId: string;
   testId: string;
-  testName: string;
   score: number;
   totalQuestions: number;
-  correctAnswers: number;
-  timeSpent?: number;
-  completedAt: Date;
+  answers: any;
+  startedAt: string;
+  completedAt?: string;
+  createdAt: string;
 }
 
 export interface SubmitTestData {
@@ -62,34 +62,33 @@ export const testsApi = {
     return response.data.data || [];
   },
 
-startTest: async (testId: string): Promise<any> => {
-  console.log('Starting test with testId:', testId);
-  
-  if (!testId) {
-    throw new Error('testId is required');
-  }
-
-  try {
-    const response = await apiClient.post<ServerResponse<any>>(
+  startTest: async (testId: string): Promise<{ attemptId: string; questions: Question[] }> => {
+    const response = await apiClient.post<ServerResponse<{ attemptId: string; questions: Question[] }>>(
       `/tests/${testId}/start`,
       {}
     );
-    console.log('Start test response:', response.data);
     return response.data.data;
-  } catch (error: any) {
-    console.error('Start test error details:', {
-      status: error.response?.status,
-      data: error.response?.data,
-      message: error.message,
-      testId
-    });
-    throw error;
-  }
-},
+  },
 
   submitTest: async (data: SubmitTestData): Promise<TestResult> => {
-    console.log('Submitting test with data:', data);
     const response = await apiClient.post<ServerResponse<TestResult>>('/tests/submit', data);
     return response.data.data;
   },
+
+
+  delete: async (id: string): Promise<void> => {
+    await apiClient.delete(`/tests/${id}`);
+  },
+
+  update: async (id: string, data: Partial<Test>): Promise<Test> => {
+    const response = await apiClient.patch<ServerResponse<Test>>(`/tests/${id}`, data);
+    return response.data.data;
+  },
+
+  create: async (data: { name: string; description?: string; timeLimit?: number; questionIds: string[] }): Promise<Test> => {
+    const response = await apiClient.post<ServerResponse<Test>>('/tests', data);
+    return response.data.data;
+  },
 };
+
+export type { Test as TestType, Question as QuestionType, TestResult as TestResultType };

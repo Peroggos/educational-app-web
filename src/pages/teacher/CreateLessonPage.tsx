@@ -105,7 +105,6 @@ const handleSubmit = async (e: React.FormEvent) => {
       return;
     }
 
-    // Формируем данные в том формате, который ожидает бэкенд
     const lessonData = {
       title: formData.title.trim(),
       description: formData.description.trim() || undefined,
@@ -118,7 +117,6 @@ const handleSubmit = async (e: React.FormEvent) => {
 
     console.log('📤 Sending lesson data to server:', JSON.stringify(lessonData, null, 2));
     
-    // Пробуем отправить
     const result = await lessonsApi.create(lessonData);
     console.log('✅ Lesson created:', result);
     
@@ -129,13 +127,18 @@ const handleSubmit = async (e: React.FormEvent) => {
     console.error('❌ Response data:', error.response?.data);
     console.error('❌ Response status:', error.response?.status);
     
-    // Показываем сообщение от сервера
-    if (error.response?.data?.message) {
-      const serverMessage = error.response.data.message;
-      if (Array.isArray(serverMessage)) {
-        toast.error(serverMessage.join(', '));
+    // Получаем детальное сообщение об ошибке
+    const errorData = error.response?.data;
+    if (errorData?.message) {
+      if (Array.isArray(errorData.message)) {
+        // Показываем каждую ошибку
+        errorData.message.forEach((msg: string) => {
+          console.error(`Validation error: ${msg}`);
+          toast.error(msg);
+        });
       } else {
-        toast.error(serverMessage);
+        console.error(`Error: ${errorData.message}`);
+        toast.error(errorData.message);
       }
     } else {
       toast.error('Ошибка при создании урока');

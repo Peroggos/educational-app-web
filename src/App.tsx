@@ -34,10 +34,14 @@ import { StudentAchievementsPage } from './pages/student/StudentAchievementsPage
 
 // Teacher pages
 import { TeacherDashboardPage } from './pages/teacher/TeacherDashboardPage';
-
+import { CreateTopicPage } from './pages/teacher/CreateTopicPage';
+import { TeacherLessonsPage } from './pages/teacher/TeacherLessonsPage';
+import { TeacherTestsPage } from './pages/teacher/TeacherTestsPage';
 // Admin pages
 import { AdminDashboardPage } from './pages/admin/AdminDashboardPage';
 import { UsersManagementPage } from './pages/admin/UsersManagementPage';
+import { CreateSubjectPage } from './pages/admin/CreateSubjectPage';
+import { AdminSubjectsPage } from './pages/admin/AdminSubjectsPage';
 
 import { Layout } from './components/Layout';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -107,6 +111,11 @@ function App() {
                 <Route path="/teacher/edit-test/:id" element={<CreateTestPage />} />
                 <Route path="/teacher/lessons/:id" element={<LessonPage />} />
                 <Route path="/teacher/students" element={<div>Управление учениками</div>} />
+                <Route path="/teacher/create-topic" element={<CreateTopicPage />} />
+                <Route path="/teacher/create-topic/:subjectId" element={<CreateTopicPage />} />
+                <Route path="/teacher/lessons" element={<TeacherLessonsPage />} />
+                <Route path="/teacher/tests" element={<TeacherTestsPage />} />
+
               </Route>
             </Route>
           </Route>
@@ -117,12 +126,13 @@ function App() {
               <Route element={<Layout />}>
                 <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
                 <Route path="/admin/users" element={<UsersManagementPage />} />
-                <Route path="/admin/subjects" element={<SubjectsPage />} />
+                <Route path="/admin/subjects" element={<AdminSubjectsPage />} />
                 <Route path="/admin/tests" element={<div>Управление тестами</div>} />
                 <Route path="/admin/statistics" element={<div>Статистика</div>} />
                 <Route path="/admin/settings" element={<div>Настройки</div>} />
                 <Route path="/admin/create-user" element={<div>Создание пользователя</div>} />
-                <Route path="/admin/create-subject" element={<div>Создание предмета</div>} />
+                <Route path="/admin/create-subject" element={<CreateSubjectPage />} />
+                <Route path="/admin/edit-subject/:id" element={<CreateSubjectPage />} />
               </Route>
             </Route>
           </Route>

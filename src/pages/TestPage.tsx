@@ -26,88 +26,79 @@ export const TestPage: React.FC = () => {
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [attemptId, setAttemptId] = useState<string | null>(null);
 
-useEffect(() => {
-  const startTest = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      console.log('=== STARTING TEST ===');
-      console.log('Test ID:', id);
-      
-      if (!id) {
-        throw new Error('ID теста не указан');
-      }
+  useEffect(() => {
+    const startTest = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        console.log('=== STARTING TEST ===');
+        console.log('Test ID:', id);
+        
+        if (!id) {
+          throw new Error('ID теста не указан');
+        }
 
-      // 1. Сначала получаем информацию о тесте
-      console.log('1. Getting test info...');
-      const testData = await testsApi.getById(id);
-      console.log('Test data:', testData);
-      setTest(testData);
-      
-      if (testData.timeLimit) {
-        setTimeLeft(testData.timeLimit * 60);
-      }
+        // 1. Сначала получаем информацию о тесте
+        console.log('1. Getting test info...');
+        const testData = await testsApi.getById(id);
+        console.log('Test data:', testData);
+        setTest(testData);
+        
+        if (testData.timeLimit) {
+          // Увеличиваем время для отладки
+          setTimeLeft(3600); // 60 минут
+        }
 
-      // 2. Начинаем тест (создаем сессию)
-      console.log('2. Creating test session...');
-      const startData = await testsApi.startTest(id);
-      console.log('Start test response:', startData);
-      
-      // Проверяем структуру ответа
-      let sessionId = null;
-      
-      if (startData.attemptId) {
-        sessionId = startData.attemptId;
-      } else if (startData.session) {
-        // Если есть поле session, берем его id
-        sessionId = startData.session.id || startData.session.attemptId;
-        console.log('Found session ID in session object:', sessionId);
-      } else if (startData.id) {
-        // Если сам объект является сессией
-        sessionId = startData.id;
-      }
-      
-      if (!sessionId) {
-        console.error('Could not find session ID in response!', startData);
-        throw new Error('Сервер не вернул ID сессии');
-      }
-      
-      setAttemptId(sessionId);
-      console.log('✅ Session created with ID:', sessionId);
-      
-      // Получаем вопросы
-      let questionsList = null;
-      if (startData.questions && startData.questions.length > 0) {
-        questionsList = startData.questions;
-      } else if (startData.session && startData.session.questions) {
-        questionsList = startData.session.questions;
-      } else if (startData.test && startData.test.questions) {
-        questionsList = startData.test.questions;
-      }
-      
-      if (!questionsList || questionsList.length === 0) {
-        console.error('No questions in response!', startData);
-        throw new Error('В тесте нет вопросов');
-      }
-      
-      setQuestions(questionsList);
-      setAnswers({});
-      console.log('✅ Loaded', questionsList.length, 'questions');
+        // 2. Начинаем тест (создаем сессию)
+        console.log('2. Creating test session...');
+        const startData = await testsApi.startTest(id);
+        console.log('Start test response:', startData);
+        
+        // Извлекаем ID сессии
+        let sessionId = null;
+        if (startData.attemptId) {
+          sessionId = startData.attemptId;
+        } else if (startData.session?.id) {
+          sessionId = startData.session.id;
+        } else if (startData.id) {
+          sessionId = startData.id;
+        }
+        
+        if (!sessionId) {
+          console.error('Could not find session ID', startData);
+          throw new Error('Сервер не вернул ID сессии');
+        }
+        
+        setAttemptId(sessionId);
+        console.log('✅ Session created with ID:', sessionId);
+        
+        // Извлекаем вопросы
+        let questionsList = startData.questions;
+        if (!questionsList && startData.session?.questions) {
+          questionsList = startData.session.questions;
+        }
+        
+        if (!questionsList || questionsList.length === 0) {
+          throw new Error('В тесте нет вопросов');
+        }
+        
+        setQuestions(questionsList);
+        setAnswers({});
+        console.log('✅ Loaded', questionsList.length, 'questions');
 
-    } catch (error: any) {
-      console.error('❌ Error starting test:', error);
-      console.error('Error response:', error.response?.data);
-      setError(error.response?.data?.message || error.message || 'Не удалось начать тест');
-    } finally {
-      setLoading(false);
+      } catch (error: any) {
+        console.error('❌ Error starting test:', error);
+        setError(error.message || 'Не удалось начать тест');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      startTest();
     }
-  };
-
-  if (id) {
-    startTest();
-  }
-}, [id]);
+  }, [id]);
 
   // Таймер
   useEffect(() => {
@@ -139,6 +130,28 @@ useEffect(() => {
     console.log(`Question ${currentQuestion} - saved answer:`, savedAnswer);
     setSelectedOption(savedAnswer !== undefined ? savedAnswer : -1);
   }, [currentQuestion, answers]);
+
+  const handleOptionChange = (index: number, optionText: string) => {
+  console.log(`Selected option ${index}:`, optionText);
+  setSelectedOption(index);
+  
+  // Автоматически сохраняем ответ при выборе
+  const newAnswers = { ...answers, [currentQuestion]: index };
+  console.log('Auto-saving answer:', newAnswers);
+  setAnswers(newAnswers);
+  
+  // Если это последний вопрос, показываем сообщение
+  if (currentQuestion === questions.length - 1) {
+    toast.success('Вы ответили на вопрос! Нажмите "Завершить тест"');
+  } else {
+    // Автоматически переходим к следующему вопросу через 0.5 секунды
+    setTimeout(() => {
+      if (currentQuestion < questions.length - 1) {
+        setCurrentQuestion(currentQuestion + 1);
+      }
+    }, 500);
+  }
+};
 
   const handleAnswer = () => {
     console.log('=== handleAnswer called ===');
@@ -174,7 +187,7 @@ useEffect(() => {
   const handleSubmit = async () => {
     try {
       if (!attemptId) {
-        toast.error('Сессия теста не найдена. Пожалуйста, обновите страницу.');
+        toast.error('Сессия теста не найдена');
         return;
       }
 
@@ -185,16 +198,9 @@ useEffect(() => {
       console.log('Answers object:', answers);
       console.log('Answered questions:', answeredQuestions, 'of', totalQuestions);
       
-      // Если нет отвеченных вопросов
       if (answeredQuestions === 0) {
         toast.error('Вы не ответили ни на один вопрос');
         return;
-      }
-
-      // Проверяем, все ли вопросы отвечены
-      if (answeredQuestions < totalQuestions) {
-        const confirm = window.confirm(`Вы ответили только на ${answeredQuestions} из ${totalQuestions} вопросов. Всё равно завершить?`);
-        if (!confirm) return;
       }
 
       // Формируем ответы для отправки
@@ -210,8 +216,6 @@ useEffect(() => {
         answers: answersToSubmit
       };
 
-      console.log('Submit data:', submitData);
-
       const result = await testsApi.submitTest(submitData);
       console.log('Test result:', result);
       
@@ -219,17 +223,7 @@ useEffect(() => {
       navigate(`/test-result/${id}`, { state: { result } });
     } catch (error: any) {
       console.error('Error submitting test:', error);
-      console.error('Error response:', error.response?.data);
-      
-      if (error.response?.status === 404) {
-        toast.error('Сессия теста истекла. Пожалуйста, начните тест заново.');
-        // Перенаправляем на страницу теста для перезапуска
-        setTimeout(() => {
-          window.location.reload();
-        }, 2000);
-      } else {
-        toast.error(error.response?.data?.message || 'Ошибка при отправке теста');
-      }
+      toast.error(error.response?.data?.message || 'Ошибка при отправке теста');
     }
   };
 
@@ -270,7 +264,6 @@ useEffect(() => {
   const question = questions[currentQuestion];
   const answeredCount = Object.keys(answers).length;
   const progress = (answeredCount / questions.length) * 100;
-  const currentAnswer = answers[currentQuestion];
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -311,7 +304,7 @@ useEffect(() => {
               key={index}
               className={`
                 block p-4 border rounded-lg cursor-pointer transition-colors
-                ${currentAnswer === index 
+                ${answers[currentQuestion] === index 
                   ? 'border-primary-600 bg-primary-50' 
                   : 'border-gray-200 hover:bg-gray-50'
                 }
@@ -322,11 +315,8 @@ useEffect(() => {
                   type="radio"
                   name="answer"
                   value={index}
-                  checked={currentAnswer === index}
-                  onChange={() => {
-                    console.log(`Selected option ${index}:`, option);
-                    setSelectedOption(index);
-                  }}
+                  checked={answers[currentQuestion] === index}
+                  onChange={() => handleOptionChange(index, option)}
                   className="h-4 w-4 text-primary-600 focus:ring-primary-500"
                 />
                 <span className="ml-3 text-gray-700">{option}</span>
@@ -375,7 +365,9 @@ useEffect(() => {
         {questions.map((_, index) => (
           <button
             key={index}
-            onClick={() => setCurrentQuestion(index)}
+            onClick={() => {
+              setCurrentQuestion(index);
+            }}
             className={`w-10 h-10 rounded-full text-sm font-medium transition-colors
               ${index === currentQuestion 
                 ? 'bg-primary-600 text-white' 

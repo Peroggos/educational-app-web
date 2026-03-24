@@ -2,17 +2,30 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { lessonsApi } from '../api/lessons.api';
 import { testsApi } from '../api/tests.api';
-import { Lesson, Test } from '../types/lesson.types';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
-import { Video, FileText, Link as LinkIcon, Image, Clock, ArrowLeft } from 'lucide-react';
+import { Clock, ArrowLeft, Video, FileText, Link as LinkIcon, Image, AlertCircle } from 'lucide-react';
+import toast from 'react-hot-toast';
 
-// Временный интерфейс для ресурсов, так как их нет в схеме Prisma
-interface Resource {
+interface Lesson {
   id: string;
-  type: 'VIDEO' | 'PDF' | 'LINK' | 'IMAGE';
   title: string;
-  url: string;
+  description?: string;
+  content: string;
+  order: number;
+  topicId: string;
+  videoUrl?: string;
+  duration?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface Test {
+  id: string;
+  name: string;
+  description?: string;
+  timeLimit?: number;
+  questions?: any[];
 }
 
 export const LessonPage: React.FC = () => {
@@ -20,45 +33,81 @@ export const LessonPage: React.FC = () => {
   const navigate = useNavigate();
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [topicTests, setTopicTests] = useState<Test[]>([]);
+  const [allLessons, setAllLessons] = useState<Lesson[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(-1);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Временные мок-данные для ресурсов
-  const mockResources: Resource[] = [
-    {
-      id: '1',
-      type: 'PDF',
-      title: 'Презентация к уроку',
-      url: '/files/presentation.pdf'
-    },
-    {
-      id: '2',
-      type: 'VIDEO',
-      title: 'Дополнительное видео',
-      url: 'https://youtube.com/watch?v=123'
-    }
-  ];
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Используем правильное название метода - getById вместо getLesson
-        const lessonData = await lessonsApi.getById(id!);
-        setLesson(lessonData);
-
-        // Загружаем тесты по теме урока
-        if (lessonData.topicId) {
-          const tests = await testsApi.getTestsByTopic(lessonData.topicId);
-          setTopicTests(tests);
-        }
-      } catch (error) {
-        console.error('Error fetching lesson:', error);
-      } finally {
-        setLoading(false);
+useEffect(() => {
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      console.log('Fetching lesson with ID:', id);
+      
+      // Проверка на невалидный ID
+      if (!id || id === 'adasd' || id === 'qwe' || id.length < 10) {
+        console.error('Invalid lesson ID:', id);
+        toast.error('Неверный ID урока');
+        // Перенаправляем на страницу предметов
+        navigate('/subjects');
+        return;
       }
-    };
+      
+      const lessonData = await lessonsApi.getById(id!);
+      console.log('Lesson data:', lessonData);
+      setLesson(lessonData);
 
+      if (lessonData.topicId) {
+        const tests = await testsApi.getByTopic(lessonData.topicId);
+        setTopicTests(tests);
+      }
+    } catch (error: any) {
+      console.error('Error fetching lesson:', error);
+      if (error.response?.status === 404) {
+        toast.error('Урок не найден');
+        navigate('/subjects');
+      } else {
+        setError(error.response?.data?.message || 'Не удалось загрузить урок');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (id) {
     fetchData();
-  }, [id]);
+  }
+}, [id, navigate]);
+
+  const goToPreviousLesson = () => {
+    if (allLessons.length === 0) {
+      toast.success('Нет доступных уроков');
+      return;
+    }
+    
+    if (currentIndex > 0) {
+      const prevLesson = allLessons[currentIndex - 1];
+      navigate(`/student/lesson/${prevLesson.id}`);
+    } else {
+      toast.success('Это первый урок в теме');
+    }
+  };
+
+  const goToNextLesson = () => {
+    if (allLessons.length === 0) {
+      toast.success('Нет доступных уроков');
+      return;
+    }
+    
+    if (currentIndex < allLessons.length - 1) {
+      const nextLesson = allLessons[currentIndex + 1];
+      navigate(`/student/lesson/${nextLesson.id}`);
+    } else {
+      toast.success('Это последний урок в теме');
+    }
+  };
 
   const getResourceIcon = (type: string) => {
     switch(type) {
@@ -78,13 +127,12 @@ export const LessonPage: React.FC = () => {
     );
   }
 
-  if (!lesson) {
+  if (error || !lesson) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-600">Урок не найден</p>
-        <Button onClick={() => navigate(-1)} className="mt-4">
-          Назад
-        </Button>
+        <AlertCircle className="mx-auto h-12 w-12 text-red-500 mb-4" />
+        <p className="text-red-600 mb-4">{error || 'Урок не найден'}</p>
+        <Button onClick={() => navigate('/subjects')}>Вернуться к предметам</Button>
       </div>
     );
   }
@@ -93,29 +141,25 @@ export const LessonPage: React.FC = () => {
     <div className="space-y-6">
       <button
         onClick={() => navigate(-1)}
-        className="flex items-center text-gray-600 hover:text-gray-900 mb-4"
+        className="flex items-center text-gray-600 hover:text-gray-900"
       >
         <ArrowLeft size={20} className="mr-2" />
         Назад
       </button>
 
-      {/* Заголовок урока */}
-      <div className="flex justify-between items-start">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">{lesson.title}</h1>
-          {lesson.description && (
-            <p className="text-gray-600 mt-2">{lesson.description}</p>
-          )}
-          {lesson.duration && (
-            <div className="flex items-center text-gray-600 mt-2">
-              <Clock size={16} className="mr-1" />
-              <span>{lesson.duration} минут</span>
-            </div>
-          )}
-        </div>
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">{lesson.title}</h1>
+        {lesson.description && (
+          <p className="text-gray-600 mt-2">{lesson.description}</p>
+        )}
+        {lesson.duration && (
+          <div className="flex items-center text-gray-600 mt-2">
+            <Clock size={16} className="mr-1" />
+            <span>{lesson.duration} минут</span>
+          </div>
+        )}
       </div>
 
-      {/* Контент урока */}
       <Card>
         <div 
           className="prose max-w-none"
@@ -123,7 +167,6 @@ export const LessonPage: React.FC = () => {
         />
       </Card>
 
-      {/* Видео, если есть */}
       {lesson.videoUrl && (
         <Card>
           <h2 className="text-xl font-semibold mb-4">Видеоурок</h2>
@@ -137,66 +180,50 @@ export const LessonPage: React.FC = () => {
         </Card>
       )}
 
-      {/* Временные ресурсы (пока нет в БД) */}
-      <Card>
-        <h2 className="text-xl font-semibold mb-4">Дополнительные материалы</h2>
-        <div className="space-y-2">
-          {mockResources.map((resource) => (
-            <a
-              key={resource.id}
-              href={resource.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-            >
-              {getResourceIcon(resource.type)}
-              <span className="ml-3 text-gray-700">{resource.title}</span>
-            </a>
-          ))}
-        </div>
-      </Card>
-
-      {/* Тесты по теме */}
       {topicTests.length > 0 && (
         <Card>
           <h2 className="text-xl font-semibold mb-4">Тесты по теме</h2>
           <div className="space-y-3">
-            {topicTests.map((test) => {
-              // Временные данные, так как в схеме Prisma нет passingScore
-              return (
-                <div
-                  key={test.id}
-                  className="flex justify-between items-center p-4 bg-gray-50 rounded-lg"
-                >
-                  <div>
-                    <h3 className="font-semibold text-gray-900">{test.name}</h3>
-                    <p className="text-sm text-gray-600">
-                      {test.questions?.length || 0} вопросов
-                    </p>
-                  </div>
-                  <Button
-                    onClick={() => navigate(`/tests/${test.id}`)}
-                    size="sm"
-                  >
-                    Начать тест
-                  </Button>
+            {topicTests.map((test) => (
+              <div
+                key={test.id}
+                className="flex justify-between items-center p-4 bg-gray-50 rounded-lg"
+              >
+                <div>
+                  <h3 className="font-semibold text-gray-900">{test.name}</h3>
+                  <p className="text-sm text-gray-600">
+                    {test.questions?.length || 0} вопросов • {test.timeLimit || 30} минут
+                  </p>
                 </div>
-              );
-            })}
+                <Button
+                  onClick={() => navigate(`/tests/${test.id}`)}
+                  size="sm"
+                >
+                  Начать тест
+                </Button>
+              </div>
+            ))}
           </div>
         </Card>
       )}
 
-      {/* Навигация */}
       <div className="flex justify-between">
-        <Button variant="outline" onClick={() => navigate(-1)}>
-          Предыдущий урок
+        <Button 
+          variant="outline" 
+          onClick={goToPreviousLesson}
+          disabled={currentIndex <= 0 || allLessons.length <= 1}
+        >
+          ← Предыдущий урок
         </Button>
         <Button onClick={() => navigate('/subjects')}>
           К списку предметов
         </Button>
-        <Button variant="outline" onClick={() => navigate('/subjects')}>
-          Следующий урок
+        <Button 
+          variant="outline" 
+          onClick={goToNextLesson}
+          disabled={currentIndex >= allLessons.length - 1 || allLessons.length <= 1}
+        >
+          Следующий урок →
         </Button>
       </div>
     </div>
